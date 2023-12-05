@@ -117,13 +117,26 @@ finally:
 #almanac = parse_almanac(RAW)
 almanac = parse_almanac(data)
 
+print("almanac created")
+
 nearest_location = None
 
+#remove any duplicate seeds:
+print("original seed size: " + str(len(almanac.seeds)))
+
+num_evaluated = 0
+
+print("beginning seed evaluation")
 for seed in almanac.seeds:
     mapped_value = int(seed)
     for map in almanac.maps:
         mapped_value = map.get_mapping(mapped_value)
-        
+
+    num_evaluated += 1
+
+    if num_evaluated % 1000000 == 0:
+        print("evaluated: " + str(num_evaluated))
+
     if(nearest_location is None or nearest_location > mapped_value):
             nearest_location = mapped_value
 
