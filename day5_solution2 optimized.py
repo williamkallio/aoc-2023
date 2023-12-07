@@ -2,7 +2,7 @@ import re
 from typing import List
 from dataclasses import dataclass
 
-RAW = """seeds: 79 14 55 13 60 20
+RAW = """seeds: 79 14 55 13
 
 seed-to-soil map:
 50 98 2
@@ -60,27 +60,14 @@ class Almanac_Map:
 
 @dataclass
 class Almanac:
-    seeds: List[int]
+    seeds: List[tuple]
     maps: List[Almanac_Map]
 
 def get_seed_ranges(seeds: List[str]) -> List[int]:
-    #every other item is the range
-    isRange = False
-    all_seeds = []
-    #save seed since we lose index
-    current_seed = 0
-    for seed_index, seed in enumerate(seeds):
-        num_seed = int(seed)
-        if(not isRange):
-            all_seeds.append(num_seed)
-            current_seed = num_seed
-            isRange = True
-        else:
-            all_seeds.extend(range(current_seed + 1, current_seed + num_seed))
-            isRange = False
-    
-    return all_seeds
-        
+
+    return [(1263068588, 44436703), (1116624626, 2393304), (2098781025, 128251971), (2946842531, 102775703), (2361566863, 262106125), (221434439, 24088025), (1368516778, 69719147), (3326254382, 101094138), (1576631370, 357411492), (3713929839, 154258863)]
+    #return [(79, 14), (55, 13)]
+
 def parse_almanac(raw_string: str) -> Almanac:
     seeds = get_seed_ranges(raw_string.split("\n")[0].split(": ")[1].split(" "))
     raw_maps = list(filter(None, raw_string.split("\n")[1:]))
@@ -108,6 +95,31 @@ def parse_almanac(raw_string: str) -> Almanac:
 
     return almanac
 
+def process_map (ranges: List[Map_Range], prev_ranges: List[tuple]):
+    ret = []
+    for r in ranges:
+        source = r.source
+        dest = r.dest
+        range = r.range
+        max_key = range + source
+
+        for prev_range in prev_ranges:
+            seed_min = prev_range[0]
+            length = prev_range[1]
+            seed_max = seed_min + length
+
+            if(seed_min >= source and seed_min < max_key):
+                if(seed_max <= max_key):
+                    ret.append((dest + seed_min - source, length))
+                elif seed_max > max_key:
+                    ret.append((dest + seed_min - source, max_key - seed_min))
+            elif seed_max >= source and seed_max < max_key:
+                ret.append((dest, seed_max - source))
+            elif source >= seed_min and max_key <= seed_max:
+                ret.append((dest, range))
+
+    return ret
+
 try:
     input_file = open("input/day5_input.txt")
     data = input_file.read()
@@ -121,26 +133,25 @@ print("almanac created")
 
 nearest_location = None
 
-#remove any duplicate seeds:
 print("original seed size: " + str(len(almanac.seeds)))
 
 num_evaluated = 0
+range_eval = List[tuple]
 
-print("beginning seed evaluation")
-for seed in almanac.seeds:
-    mapped_value = int(seed)
-    for map in almanac.maps:
-        mapped_value = map.get_mapping(mapped_value)
+soil_ranges = process_map(almanac.maps[0].ranges, almanac.seeds)
+fert_ranges = process_map(almanac.maps[1].ranges, soil_ranges)
+water_ranges = process_map(almanac.maps[2].ranges, fert_ranges)
+light_ranges = process_map(almanac.maps[3].ranges, water_ranges)
+temp_ranges = process_map(almanac.maps[4].ranges, light_ranges)
+hum_ranges = process_map(almanac.maps[5].ranges, temp_ranges)
+loc_ranges = process_map(almanac.maps[6].ranges, hum_ranges)
 
-    num_evaluated += 1
+min = 99999999999999999999
+for i in loc_ranges:
+    if i[0] < min:
+        min = i[0]
 
-    if num_evaluated % 1000000 == 0:
-        print("evaluated: " + str(num_evaluated))
-
-    if(nearest_location is None or nearest_location > mapped_value):
-            nearest_location = mapped_value
-
-print(nearest_location)
+print(min)
 
 
 
